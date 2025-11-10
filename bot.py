@@ -3,21 +3,20 @@ import discord
 from discord.ext import commands
 import requests
 
-# ---- Environment variables ----
-DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")  # Your Discord bot token
-LOCAL_API_URL = os.getenv("LOCAL_API_URL", "http://localhost:8080/generate")
+DISCORD_TOKEN = os.getenv("MTQzNzIxMjc1NTE0Nzg4NjY3Mg.G7PzO9.V7JP9DAcep0MNcZUpZ85C8Zl3vli5qNgvzmV5U")
+LOCAL_API_URL = os.getenv("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", "http://localhost:8080/generate")
 
-# ---- Discord client setup ----
 intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 def query_local_api(prompt):
-    """Send prompt to local Flask API and get model output"""
-    r = requests.post(LOCAL_API_URL, json={"prompt": prompt})
-    if r.status_code != 200:
-        return f"Error: {r.text}"
-    return r.json().get("text", "")
+    try:
+        r = requests.post(LOCAL_API_URL, json={"prompt": prompt})
+        r.raise_for_status()
+        return r.json().get("text", "")
+    except Exception as e:
+        return f"API Error: {e}"
 
 @bot.event
 async def on_ready():
@@ -25,14 +24,8 @@ async def on_ready():
 
 @bot.command(name="ask")
 async def ask(ctx, *, prompt: str):
-    """Use: !ask <your message>"""
     await ctx.send("💭 Thinking...")
-    try:
-        reply = query_local_api(prompt)
-        if len(reply) > 1900:
-            reply = reply[:1900] + "\n...[truncated]"
-        await ctx.send(reply)
-    except Exception as e:
-        await ctx.send(f"❌ Error: {e}")
+    reply = query_local_api(prompt)
+    await ctx.send(reply[:1900] + ("..." if len(reply) > 1900 else ""))
 
 bot.run(DISCORD_TOKEN)
